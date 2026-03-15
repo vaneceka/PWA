@@ -5,25 +5,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    
     <title>LingoReader Pro</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
     <style>
         :root { --p: #007aff; --bg: #ffffff; --text: #000000; --card: #f2f2f7; }
         [data-theme="dark"] { --bg: #000000; --text: #ffffff; --card: #1c1c1e; --p: #0a84ff; }
 
-        /* OPRAVA: Odstraněno overflow-x: hidden, aby šlo po přiblížení scrollovat do stran */
         body { font-family: -apple-system, system-ui, sans-serif; margin: 0; background: var(--bg); color: var(--text); transition: 0.3s; }
         
-        /* OPRAVA: Změněno na position: fixed, aby hlavička neutíkala při zoomu do strany */
         header { display: flex; justify-content: space-between; align-items: center; padding: 45px 20px 15px; background: rgba(var(--bg), 0.8); backdrop-filter: blur(15px); position: fixed; top: 0; left: 0; width: 100%; box-sizing: border-box; z-index: 100; }
         .nav-icons { display: flex; gap: 20px; font-size: 20px; cursor: pointer; }
 
-        /* OPRAVA: Přidán horní padding kvůli fixed hlavičce */
         .tab-content { display: none; padding: 100px 20px 120px 20px; }
         .tab-content.active { display: block; }
         #tab-reader { padding: 100px 0 120px 0; }
 
-        /* Kontejner pro scrollování PDF upraven pro horizontální posun */
         #pdf-view { position: relative; display: flex; flex-direction: column; align-items: flex-start; min-width: 100%; width: max-content; }
         
         .pdf-page-wrapper { position: relative; background: white; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
@@ -33,16 +34,13 @@
         .textLayer span { color: transparent; position: absolute; white-space: pre; cursor: text; transform-origin: 0% 0%; }
         .textLayer ::selection { background: rgba(0, 122, 255, 0.3); }
 
-        /* Ovládací prvky PDF */
         .pagination-bar { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background: rgba(var(--bg), 0.9); backdrop-filter: blur(10px); padding: 8px 16px; border-radius: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); z-index: 50; display: none; }
         #page-info { font-weight: bold; font-size: 14px; color: var(--text); }
 
-        /* NOVÉ: Plovoucí tlačítka pro Zoom */
         .zoom-controls { position: fixed; right: 15px; bottom: 140px; background: rgba(var(--bg), 0.9); backdrop-filter: blur(10px); border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); display: none; flex-direction: column; align-items: center; z-index: 55; }
         .zoom-controls button { background: none; border: none; color: var(--p); font-size: 22px; padding: 12px 15px; cursor: pointer; font-weight: bold; }
         .zoom-controls .zoom-val { font-size: 12px; font-weight: bold; color: var(--text); padding: 5px 0; border-top: 1px solid rgba(128,128,128,0.2); border-bottom: 1px solid rgba(128,128,128,0.2); width: 100%; text-align: center; }
 
-        /* Spodní Menu */
         .tab-bar { position: fixed; bottom: 0; left: 0; width: 100%; display: flex; justify-content: space-around; padding: 10px 0 calc(10px + env(safe-area-inset-bottom)); background: var(--card); border-top: 1px solid #ccc; z-index: 101; }
         .tab-item { text-align: center; font-size: 10px; color: #8e8e93; text-decoration: none; flex: 1; }
         .tab-item.active { color: var(--p); }
@@ -69,6 +67,9 @@
 
 <div id="tab-library" class="tab-content active">
     <h2 style="margin-top: 0;">Moje Knihy</h2>
+    
+    <button class="btn-action" style="background: #ff9500; margin-bottom: 15px;" onclick="forceUpdate()">🔄 Aktualizovat aplikaci</button>
+    
     <label for="file-upload" class="btn-action" style="margin-bottom: 20px; background: #34c759;">+ Přidat knihu (PDF)</label>
     <input type="file" id="file-upload" accept="application/pdf" style="display:none">
     <div id="book-list">Načítám knihovnu...</div>
@@ -132,7 +133,12 @@
     let lastSelection = { en: '', cs: '' };
     let db;
     let pageObserver; 
-    let globalZoom = 1.0; // Proměnná pro Zoom
+    let globalZoom = 1.0; 
+
+    // NOVÉ: Funkce pro aktualizaci
+    function forceUpdate() {
+        window.location.href = window.location.pathname + '?v=' + new Date().getTime();
+    }
 
     function initDB() {
         return new Promise((resolve, reject) => {
@@ -262,7 +268,6 @@
         };
     }
 
-    // --- ZOOM LOGIKA ---
     function changeZoom(delta) {
         let newZoom = globalZoom + delta;
         if (newZoom < 0.5) newZoom = 0.5;
@@ -273,7 +278,7 @@
         document.getElementById('zoom-val').innerText = Math.round(globalZoom * 100) + '%';
         
         let currentPage = parseInt(document.getElementById('page-info').innerText.split(' / ')[0]) || 1;
-        initScrollReader(currentPage); // Překreslení se zachováním pozice čtení
+        initScrollReader(currentPage); 
     }
 
     function initScrollReader(startPage) {
@@ -327,7 +332,6 @@
         wrapper.appendChild(canvas);
         wrapper.appendChild(textLayerDiv);
         
-        // Zjištění měřítka včetně našeho Zoom faktoru
         const unscaledViewport = page.getViewport({ scale: 1 });
         const baseScale = window.innerWidth / unscaledViewport.width;
         const viewport = page.getViewport({ scale: baseScale * globalZoom });
@@ -338,7 +342,6 @@
         canvas.style.width = Math.floor(viewport.width) + "px";
         canvas.style.height = Math.floor(viewport.height) + "px";
 
-        // Vynucení rozměrů obalu, aby šlo scrollovat do strany, když je zoom > 100%
         wrapper.style.width = Math.floor(viewport.width) + "px";
         wrapper.style.minHeight = 'auto';
         wrapper.style.height = Math.floor(viewport.height) + "px";
