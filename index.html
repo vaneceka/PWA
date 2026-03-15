@@ -11,33 +11,41 @@
         :root { --p: #007aff; --bg: #ffffff; --text: #000000; --card: #f2f2f7; }
         [data-theme="dark"] { --bg: #000000; --text: #ffffff; --card: #1c1c1e; --p: #0a84ff; }
 
+        /* OPRAVA: Odstraněno overflow-x: hidden, aby šlo po přiblížení scrollovat do stran */
         body { font-family: -apple-system, system-ui, sans-serif; margin: 0; background: var(--bg); color: var(--text); transition: 0.3s; }
         
-        header { display: flex; justify-content: space-between; align-items: center; padding: 45px 20px 15px; background: rgba(var(--bg), 0.8); backdrop-filter: blur(15px); position: sticky; top: 0; z-index: 100; }
+        /* OPRAVA: Změněno na position: fixed, aby hlavička neutíkala při zoomu do strany */
+        header { display: flex; justify-content: space-between; align-items: center; padding: 45px 20px 15px; background: rgba(var(--bg), 0.8); backdrop-filter: blur(15px); position: fixed; top: 0; left: 0; width: 100%; box-sizing: border-box; z-index: 100; }
         .nav-icons { display: flex; gap: 20px; font-size: 20px; cursor: pointer; }
 
-        /* Kontejner pro scrollování PDF */
-        #pdf-view { position: relative; width: 100%; display: flex; flex-direction: column; align-items: center; padding-bottom: 100px; }
+        /* OPRAVA: Přidán horní padding kvůli fixed hlavičce */
+        .tab-content { display: none; padding: 100px 20px 120px 20px; }
+        .tab-content.active { display: block; }
+        #tab-reader { padding: 100px 0 120px 0; }
+
+        /* Kontejner pro scrollování PDF upraven pro horizontální posun */
+        #pdf-view { position: relative; display: flex; flex-direction: column; align-items: flex-start; min-width: 100%; width: max-content; }
         
-        /* Obal každé stránky zvlášť */
-        .pdf-page-wrapper { position: relative; width: 100%; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 15px; background: white; }
+        .pdf-page-wrapper { position: relative; background: white; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         .pdf-page-wrapper canvas { display: block; z-index: 1; width: 100%; }
         
         .textLayer { position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: hidden; line-height: 1; text-size-adjust: none; z-index: 2; }
         .textLayer span { color: transparent; position: absolute; white-space: pre; cursor: text; transform-origin: 0% 0%; }
         .textLayer ::selection { background: rgba(0, 122, 255, 0.3); }
 
-        /* Zmenšený indikátor stránky, tlačítka smazána */
+        /* Ovládací prvky PDF */
         .pagination-bar { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background: rgba(var(--bg), 0.9); backdrop-filter: blur(10px); padding: 8px 16px; border-radius: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); z-index: 50; display: none; }
         #page-info { font-weight: bold; font-size: 14px; color: var(--text); }
 
-        /* OPRAVA MENU: safe-area-inset-bottom pro iPhone notch/home bar */
+        /* NOVÉ: Plovoucí tlačítka pro Zoom */
+        .zoom-controls { position: fixed; right: 15px; bottom: 140px; background: rgba(var(--bg), 0.9); backdrop-filter: blur(10px); border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); display: none; flex-direction: column; align-items: center; z-index: 55; }
+        .zoom-controls button { background: none; border: none; color: var(--p); font-size: 22px; padding: 12px 15px; cursor: pointer; font-weight: bold; }
+        .zoom-controls .zoom-val { font-size: 12px; font-weight: bold; color: var(--text); padding: 5px 0; border-top: 1px solid rgba(128,128,128,0.2); border-bottom: 1px solid rgba(128,128,128,0.2); width: 100%; text-align: center; }
+
+        /* Spodní Menu */
         .tab-bar { position: fixed; bottom: 0; left: 0; width: 100%; display: flex; justify-content: space-around; padding: 10px 0 calc(10px + env(safe-area-inset-bottom)); background: var(--card); border-top: 1px solid #ccc; z-index: 101; }
         .tab-item { text-align: center; font-size: 10px; color: #8e8e93; text-decoration: none; flex: 1; }
         .tab-item.active { color: var(--p); }
-
-        .tab-content { display: none; padding: 20px; padding-bottom: 120px; }
-        .tab-content.active { display: block; }
 
         .card { background: var(--card); border-radius: 15px; padding: 40px 20px; text-align: center; margin-top: 30px; min-height: 200px; display: flex; flex-direction: column; justify-content: center; font-size: 24px; font-weight: 600; }
 
@@ -66,11 +74,17 @@
     <div id="book-list">Načítám knihovnu...</div>
 </div>
 
-<div id="tab-reader" class="tab-content" style="padding: 0;">
+<div id="tab-reader" class="tab-content">
     <div id="pdf-view"></div>
     
     <div class="pagination-bar" id="pagination">
         <span id="page-info">1 / 1</span>
+    </div>
+
+    <div class="zoom-controls" id="zoom-controls">
+        <button onclick="changeZoom(0.25)">➕</button>
+        <div class="zoom-val" id="zoom-val">100%</div>
+        <button onclick="changeZoom(-0.25)">➖</button>
     </div>
     
     <div id="no-book-msg" style="text-align:center; padding: 50px 20px; display:none;">
@@ -112,15 +126,14 @@
 </div>
 
 <script>
-    // --- ZÁKLADNÍ PROMĚNNÉ ---
     let words = JSON.parse(localStorage.getItem('lingo_words') || '[]');
     let currentPdf = null;
     let currentBookId = null;
     let lastSelection = { en: '', cs: '' };
     let db;
-    let pageObserver; // Pro scrollování
+    let pageObserver; 
+    let globalZoom = 1.0; // Proměnná pro Zoom
 
-    // --- INICIALIZACE DATABÁZE (IndexedDB pro PDF) ---
     function initDB() {
         return new Promise((resolve, reject) => {
             const request = indexedDB.open('LingoDB', 1);
@@ -137,13 +150,11 @@
 
     initDB().then(() => renderLibrary());
 
-    // --- TÉMA ---
     function toggleTheme() {
         const doc = document.documentElement;
         doc.setAttribute('data-theme', doc.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
     }
 
-    // --- PŘEKLAD ---
     async function translate(text) {
         if (!text) return "";
         try {
@@ -153,7 +164,6 @@
         } catch (e) { return "Chyba překladu"; }
     }
 
-    // --- KNIHOVNA LOGIKA ---
     const fileInput = document.getElementById('file-upload');
     fileInput.addEventListener('change', async (e) => {
         const file = e.target.files[0];
@@ -207,6 +217,7 @@
                     currentPdf = null;
                     document.getElementById('pdf-view').style.display = 'none';
                     document.getElementById('pagination').style.display = 'none';
+                    document.getElementById('zoom-controls').style.display = 'none';
                     document.getElementById('book-title').innerText = "Knihovna";
                 }
                 renderLibrary();
@@ -228,11 +239,11 @@
             
             document.getElementById('pdf-view').style.display = 'flex';
             document.getElementById('pagination').style.display = 'block';
+            document.getElementById('zoom-controls').style.display = 'flex';
             document.getElementById('no-book-msg').style.display = 'none';
             
             document.getElementById('nav-read').click();
             
-            // Spuštění scrollovacího enginu na uložené stránce
             initScrollReader(book.currentPage || 1);
         };
     }
@@ -251,21 +262,32 @@
         };
     }
 
-    // --- NOVÝ SYSTÉM: SCROLLOVÁNÍ & RETINA BLUR FIX ---
+    // --- ZOOM LOGIKA ---
+    function changeZoom(delta) {
+        let newZoom = globalZoom + delta;
+        if (newZoom < 0.5) newZoom = 0.5;
+        if (newZoom > 3.0) newZoom = 3.0;
+        if (newZoom === globalZoom) return;
+        
+        globalZoom = newZoom;
+        document.getElementById('zoom-val').innerText = Math.round(globalZoom * 100) + '%';
+        
+        let currentPage = parseInt(document.getElementById('page-info').innerText.split(' / ')[0]) || 1;
+        initScrollReader(currentPage); // Překreslení se zachováním pozice čtení
+    }
+
     function initScrollReader(startPage) {
         const container = document.getElementById('pdf-view');
         container.innerHTML = '';
         
         if (pageObserver) pageObserver.disconnect();
         
-        // Sledujeme, která stránka je právě na obrazovce
         pageObserver = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
                     const wrapper = entry.target;
                     const num = parseInt(wrapper.dataset.page);
                     
-                    // Pokud ještě nebyla vykreslena, vykreslíme ji (Lazy Load)
                     if (wrapper.dataset.loaded === 'false') {
                         wrapper.dataset.loaded = 'true';
                         renderSinglePage(num, wrapper);
@@ -275,14 +297,13 @@
                     updateBookProgress(num);
                 }
             });
-        }, { rootMargin: '300px 0px' }); // Přednačítáme trochu dopředu
+        }, { rootMargin: '300px 0px' });
         
-        // Vytvoříme obaly pro všechny stránky (zatím prázdné kvůli paměti iPhonu)
         for (let num = 1; num <= currentPdf.numPages; num++) {
             const wrapper = document.createElement('div');
             wrapper.className = 'pdf-page-wrapper';
             wrapper.id = 'page-wrapper-' + num;
-            wrapper.style.minHeight = window.innerHeight + 'px'; // Zástupná výška pro plynulý posuvník
+            wrapper.style.minHeight = window.innerHeight + 'px'; 
             wrapper.dataset.page = num;
             wrapper.dataset.loaded = 'false';
             
@@ -290,7 +311,6 @@
             pageObserver.observe(wrapper);
         }
 
-        // Automatické odscrollování na rozečtenou stránku
         setTimeout(() => {
             const targetPage = document.getElementById('page-wrapper-' + startPage);
             if (targetPage) targetPage.scrollIntoView();
@@ -307,28 +327,27 @@
         wrapper.appendChild(canvas);
         wrapper.appendChild(textLayerDiv);
         
-        // Zjištění měřítka k šířce displeje telefonu
+        // Zjištění měřítka včetně našeho Zoom faktoru
         const unscaledViewport = page.getViewport({ scale: 1 });
-        const scale = window.innerWidth / unscaledViewport.width;
-        const viewport = page.getViewport({ scale: scale });
+        const baseScale = window.innerWidth / unscaledViewport.width;
+        const viewport = page.getViewport({ scale: baseScale * globalZoom });
 
-        // OPRAVA BLURU: Využití DevicePixelRatio pro super-ostré fonty na iPhonu
         const outputScale = window.devicePixelRatio || 1;
         canvas.width = Math.floor(viewport.width * outputScale);
         canvas.height = Math.floor(viewport.height * outputScale);
         canvas.style.width = Math.floor(viewport.width) + "px";
         canvas.style.height = Math.floor(viewport.height) + "px";
 
+        // Vynucení rozměrů obalu, aby šlo scrollovat do strany, když je zoom > 100%
+        wrapper.style.width = Math.floor(viewport.width) + "px";
+        wrapper.style.minHeight = 'auto';
+        wrapper.style.height = Math.floor(viewport.height) + "px";
+
         const transform = outputScale !== 1 ? [outputScale, 0, 0, outputScale, 0, 0] : null;
         const context = canvas.getContext('2d');
         
-        // Nastavení reálné výšky po zjištění parametrů stránky
-        wrapper.style.minHeight = 'auto';
-        wrapper.style.height = canvas.style.height;
-
         await page.render({ canvasContext: context, transform: transform, viewport: viewport }).promise;
 
-        // Neviditelná vrstva pro přesný výběr textu
         textLayerDiv.style.width = viewport.width + 'px';
         textLayerDiv.style.height = viewport.height + 'px';
         textLayerDiv.style.setProperty('--scale-factor', viewport.scale);
@@ -342,7 +361,6 @@
         });
     }
 
-    // --- OZNAČOVÁNÍ A PŘEKLAD ---
     document.addEventListener('touchend', handleSelection);
     document.addEventListener('mouseup', handleSelection);
 
@@ -370,7 +388,6 @@
         window.getSelection().removeAllRanges(); 
     }
 
-    // --- NAVIGACE TABS ---
     function showTab(id, el) {
         document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
         document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
@@ -381,20 +398,20 @@
             if(!currentPdf) {
                 document.getElementById('pdf-view').style.display = 'none';
                 document.getElementById('pagination').style.display = 'none';
+                document.getElementById('zoom-controls').style.display = 'none';
                 document.getElementById('no-book-msg').style.display = 'block';
             } else {
                 renderLibrary();
+                document.getElementById('zoom-controls').style.display = 'flex';
             }
-        } else if (id === 'library') {
-            renderLibrary();
-        } else if (id === 'words') {
-            renderWords();
-        } else if (id === 'cards') {
-            startCards();
+        } else {
+            document.getElementById('zoom-controls').style.display = 'none';
+            if (id === 'library') renderLibrary();
+            else if (id === 'words') renderWords();
+            else if (id === 'cards') startCards();
         }
     }
 
-    // --- SLOVA & KARTY ---
     function renderWords() {
         const list = document.getElementById('word-list');
         list.innerHTML = words.map(w => `
