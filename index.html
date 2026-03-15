@@ -16,48 +16,19 @@
         header { display: flex; justify-content: space-between; align-items: center; padding: 45px 20px 15px; background: rgba(var(--bg), 0.8); backdrop-filter: blur(15px); position: sticky; top: 0; z-index: 100; }
         .nav-icons { display: flex; gap: 20px; font-size: 20px; cursor: pointer; }
 
-        /* --- PDF VRSTVY (VYLEPŠENÉ ZAROVNÁNÍ) --- */
         #pdf-view { position: relative; width: 100%; display: flex; justify-content: center; margin-bottom: 60px; }
-        #pdf-render { max-width: 100%; height: auto; z-index: 1; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        /* OPRAVA: Odstraněno max-width a height: auto, aby se vrstvy nerozjely */
+        #pdf-render { z-index: 1; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
         
-        .textLayer {
-            position: absolute;
-            left: 0; top: 0; right: 0; bottom: 0;
-            overflow: hidden;
-            line-height: 1;
-            text-size-adjust: none;
-            z-index: 2;
-        }
-        .textLayer span {
-            color: transparent;
-            position: absolute;
-            white-space: pre;
-            cursor: text;
-            transform-origin: 0% 0%;
-        }
-        /* Zvýraznění při označení pro lepší orientaci */
+        .textLayer { position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: hidden; line-height: 1; text-size-adjust: none; z-index: 2; }
+        .textLayer span { color: transparent; position: absolute; white-space: pre; cursor: text; transform-origin: 0% 0%; }
         .textLayer ::selection { background: rgba(0, 122, 255, 0.3); }
 
-        /* --- PLOVOUCÍ STRÁNKOVÁNÍ --- */
-        .pagination-bar {
-            position: fixed;
-            bottom: 90px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(var(--bg), 0.9);
-            backdrop-filter: blur(10px);
-            padding: 10px 20px;
-            border-radius: 30px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-            display: flex;
-            align-items: center;
-            gap: 20px;
-            z-index: 50;
-        }
+        .pagination-bar { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); background: rgba(var(--bg), 0.9); backdrop-filter: blur(10px); padding: 10px 20px; border-radius: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); display: flex; align-items: center; gap: 20px; z-index: 50; }
         .pagination-bar button { background: none; border: none; font-size: 20px; color: var(--p); font-weight: bold; }
 
         .tab-bar { position: fixed; bottom: 0; width: 100%; display: flex; justify-content: space-around; padding: 15px 0 35px; background: var(--card); border-top: 1px solid #ccc; z-index: 101; }
-        .tab-item { text-align: center; font-size: 10px; color: #8e8e93; text-decoration: none; }
+        .tab-item { text-align: center; font-size: 10px; color: #8e8e93; text-decoration: none; flex: 1; }
         .tab-item.active { color: var(--p); }
 
         .tab-content { display: none; padding: 20px; padding-bottom: 120px; }
@@ -65,27 +36,32 @@
 
         .card { background: var(--card); border-radius: 15px; padding: 40px 20px; text-align: center; margin-top: 30px; min-height: 200px; display: flex; flex-direction: column; justify-content: center; font-size: 24px; font-weight: 600; }
 
-        /* Přizpůsobení pro delší věty */
         #popover { position: fixed; bottom: 110px; left: 15px; right: 15px; background: var(--card); border-radius: 20px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); display: none; z-index: 1000; max-height: 60vh; overflow-y: auto; }
         #pop-en { font-weight: bold; font-size: 18px; line-height: 1.4; word-wrap: break-word; }
         #pop-cs { margin: 15px 0; font-size: 16px; opacity: 0.9; line-height: 1.4; word-wrap: break-word; }
-        .btn-action { background: var(--p); color: white; border: none; padding: 12px; border-radius: 12px; width: 100%; font-weight: bold; margin-top: 10px; font-size: 16px; }
+        .btn-action { background: var(--p); color: white; border: none; padding: 14px; border-radius: 12px; width: 100%; font-weight: bold; margin-top: 10px; font-size: 16px; cursor: pointer; display: block; text-align: center; }
         
         .word-item { padding: 15px; border-bottom: 1px solid rgba(128,128,128,0.3); display: flex; flex-direction: column; }
+        .book-item { padding: 15px; background: var(--card); border-radius: 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
     </style>
 </head>
 <body>
 
 <header>
-    <div style="font-weight: bold; font-size: 18px;" id="book-title">LingoReader</div>
+    <div style="font-weight: bold; font-size: 18px;" id="book-title">Knihovna</div>
     <div class="nav-icons">
         <span onclick="toggleTheme()">🌓</span>
-        <label for="file-upload" style="cursor:pointer">📂</label>
-        <input type="file" id="file-upload" accept="application/pdf" style="display:none">
     </div>
 </header>
 
-<div id="tab-reader" class="tab-content active" style="padding: 0;">
+<div id="tab-library" class="tab-content active">
+    <h2 style="margin-top: 0;">Moje Knihy</h2>
+    <label for="file-upload" class="btn-action" style="margin-bottom: 20px; background: #34c759;">+ Přidat knihu (PDF)</label>
+    <input type="file" id="file-upload" accept="application/pdf" style="display:none">
+    <div id="book-list">Načítám knihovnu...</div>
+</div>
+
+<div id="tab-reader" class="tab-content" style="padding: 0;">
     <div id="pdf-view">
         <canvas id="pdf-render"></canvas>
         <div id="text-layer" class="textLayer"></div>
@@ -96,6 +72,11 @@
         <span id="page-info" style="font-weight: bold; font-size: 14px;">1 / 1</span>
         <button onclick="nextPage()">➡️</button>
     </div>
+    
+    <div id="no-book-msg" style="text-align:center; padding: 50px 20px; display:none;">
+        <p>Zatím nemáte otevřenou žádnou knihu.</p>
+        <button class="btn-action" onclick="document.getElementById('nav-lib').click()">Přejít do knihovny</button>
+    </div>
 </div>
 
 <div id="tab-words" class="tab-content">
@@ -105,7 +86,7 @@
 
 <div id="tab-translate" class="tab-content">
     <h2>Překladač</h2>
-    <textarea id="manual-input" style="width:100%; height:120px; border-radius:15px; padding:15px; background:var(--card); color:var(--text); border:none; font-size:16px;" placeholder="Vlož slovo nebo větu..."></textarea>
+    <textarea id="manual-input" style="width:100%; height:120px; border-radius:15px; padding:15px; background:var(--card); color:var(--text); border:none; font-size:16px; box-sizing: border-box;" placeholder="Vlož slovo nebo větu..."></textarea>
     <button class="btn-action" onclick="manualTranslate()">Přeložit</button>
     <div id="manual-result" style="margin-top:20px"></div>
 </div>
@@ -119,54 +100,159 @@
     <div id="pop-en"></div>
     <div id="pop-cs"></div>
     <button class="btn-action" onclick="saveWord()">Uložit do slovníčku</button>
-    <button onclick="closePop()" style="background:none; border:none; color:gray; width:100%; margin-top:15px; padding: 10px;">Zrušit označení</button>
+    <button onclick="closePop()" style="background:none; border:none; color:gray; width:100%; margin-top:15px; padding: 10px; font-weight:bold;">Zrušit označení</button>
 </div>
 
 <div class="tab-bar">
-    <a href="#" class="tab-item active" onclick="showTab('reader', this)">📖<br>Kniha</a>
+    <a href="#" id="nav-lib" class="tab-item active" onclick="showTab('library', this)">📚<br>Knihovna</a>
+    <a href="#" id="nav-read" class="tab-item" onclick="showTab('reader', this)">📖<br>Čtení</a>
     <a href="#" class="tab-item" onclick="showTab('translate', this)">🔍<br>Překlad</a>
-    <a href="#" class="tab-item" onclick="showTab('words', this)">📚<br>Slova</a>
+    <a href="#" class="tab-item" onclick="showTab('words', this)">📝<br>Slova</a>
     <a href="#" class="tab-item" onclick="showTab('cards', this)">🗂️<br>Karty</a>
 </div>
 
 <script>
+    // --- ZÁKLADNÍ PROMĚNNÉ ---
     let words = JSON.parse(localStorage.getItem('lingo_words') || '[]');
     let currentPdf = null;
-    let pageNum = parseInt(localStorage.getItem('pdf_last_page')) || 1;
+    let currentBookId = null;
+    let pageNum = 1;
     let lastSelection = { en: '', cs: '' };
+    let db;
 
-    function toggleTheme() {
-        const doc = document.documentElement;
-        const isDark = doc.getAttribute('data-theme') === 'dark';
-        doc.setAttribute('data-theme', isDark ? 'light' : 'dark');
+    // --- INICIALIZACE DATABÁZE (IndexedDB pro PDF) ---
+    function initDB() {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open('LingoDB', 1);
+            request.onerror = (e) => reject("Chyba databáze");
+            request.onsuccess = (e) => { db = e.target.result; resolve(db); };
+            request.onupgradeneeded = (e) => {
+                const database = e.target.result;
+                if (!database.objectStoreNames.contains('books')) {
+                    database.createObjectStore('books', { keyPath: 'id' });
+                }
+            };
+        });
     }
 
+    initDB().then(() => renderLibrary());
+
+    // --- TÉMA ---
+    function toggleTheme() {
+        const doc = document.documentElement;
+        doc.setAttribute('data-theme', doc.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+    }
+
+    // --- PŘEKLAD ---
     async function translate(text) {
         if (!text) return "";
         try {
-            // MyMemory API umí překládat celé věty
             const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|cs`);
             const data = await res.json();
             return data.responseData.translatedText;
         } catch (e) { return "Chyba překladu"; }
     }
 
+    // --- KNIHOVNA LOGIKA ---
     const fileInput = document.getElementById('file-upload');
     fileInput.addEventListener('change', async (e) => {
         const file = e.target.files[0];
         if (!file) return;
-        document.getElementById('book-title').innerText = file.name.substring(0, 15) + "...";
-        const reader = new FileReader();
-        reader.onload = function() { loadPdf(new Uint8Array(this.result)); };
-        reader.readAsArrayBuffer(file);
+        
+        document.getElementById('book-list').innerHTML = "Ukládám knihu do iPhonu...";
+        
+        const arrayBuffer = await file.arrayBuffer();
+        const book = {
+            id: Date.now().toString(),
+            name: file.name.replace('.pdf', ''),
+            data: arrayBuffer,
+            currentPage: 1
+        };
+
+        const tx = db.transaction('books', 'readwrite');
+        tx.objectStore('books').put(book);
+        tx.oncomplete = () => renderLibrary();
     });
 
-    async function loadPdf(data) {
-        currentPdf = await pdfjsLib.getDocument(data).promise;
-        document.getElementById('pagination').style.display = 'flex';
-        renderPage(pageNum);
+    function renderLibrary() {
+        if(!db) return;
+        const tx = db.transaction('books', 'readonly');
+        const req = tx.objectStore('books').getAll();
+        req.onsuccess = () => {
+            const books = req.result;
+            const list = document.getElementById('book-list');
+            if(books.length === 0) {
+                list.innerHTML = "<p style='color:gray; text-align:center;'>Zatím tu nemáte žádné knihy.</p>";
+                return;
+            }
+            list.innerHTML = books.map(b => `
+                <div class="book-item">
+                    <div onclick="openBook('${b.id}')" style="flex:1; cursor:pointer;">
+                        <b>${b.name.substring(0,25)}...</b><br>
+                        <small style="color:gray;">Rozečteno: Strana ${b.currentPage}</small>
+                    </div>
+                    <button onclick="deleteBook('${b.id}')" style="background:none; border:none; font-size:22px; color:#ff3b30; padding:10px;">🗑️</button>
+                </div>
+            `).reverse().join('');
+        };
     }
 
+    function deleteBook(id) {
+        if(confirm("Opravdu smazat tuto knihu?")) {
+            const tx = db.transaction('books', 'readwrite');
+            tx.objectStore('books').delete(id);
+            tx.oncomplete = () => {
+                if(currentBookId === id) {
+                    currentBookId = null;
+                    currentPdf = null;
+                    document.getElementById('pdf-view').style.display = 'none';
+                    document.getElementById('pagination').style.display = 'none';
+                    document.getElementById('book-title').innerText = "Knihovna";
+                }
+                renderLibrary();
+            };
+        }
+    }
+
+    function openBook(id) {
+        const tx = db.transaction('books', 'readonly');
+        const req = tx.objectStore('books').get(id);
+        req.onsuccess = async () => {
+            const book = req.result;
+            if(!book) return;
+            
+            currentBookId = book.id;
+            pageNum = book.currentPage || 1;
+            document.getElementById('book-title').innerText = book.name.substring(0, 15) + "...";
+            
+            // Otevření PDF z uložených dat
+            currentPdf = await pdfjsLib.getDocument({ data: new Uint8Array(book.data) }).promise;
+            
+            document.getElementById('pdf-view').style.display = 'flex';
+            document.getElementById('pagination').style.display = 'flex';
+            document.getElementById('no-book-msg').style.display = 'none';
+            
+            // Přepnutí do záložky "Čtení"
+            document.getElementById('nav-read').click();
+            renderPage(pageNum);
+        };
+    }
+
+    function updateBookProgress(page) {
+        if(!currentBookId || !db) return;
+        const tx = db.transaction('books', 'readwrite');
+        const store = tx.objectStore('books');
+        const req = store.get(currentBookId);
+        req.onsuccess = () => {
+            const book = req.result;
+            if(book) {
+                book.currentPage = page;
+                store.put(book);
+            }
+        };
+    }
+
+    // --- OPRAVA: VYLEPŠENÉ PDF VYKRESLOVÁNÍ PRO PŘESNÉ OZNAČOVÁNÍ ---
     async function renderPage(num) {
         if (!currentPdf) return;
         const page = await currentPdf.getPage(num);
@@ -174,17 +260,24 @@
         const textLayerDiv = document.getElementById('text-layer');
         const context = canvas.getContext('2d');
         
-        const viewport = page.getViewport({ scale: window.innerWidth / page.getViewport({scale:1}).width * 1.5 });
+        // Přesný výpočet měřítka podle šířky displeje telefonu
+        const scale = window.innerWidth / page.getViewport({scale: 1}).width;
+        const viewport = page.getViewport({ scale: scale });
+
+        // Vynutíme naprosto stejné rozměry obrázku
         canvas.height = viewport.height;
         canvas.width = viewport.width;
+        canvas.style.width = viewport.width + 'px';
+        canvas.style.height = viewport.height + 'px';
 
         // Vykreslení PDF obrázku
         await page.render({ canvasContext: context, viewport: viewport }).promise;
 
-        // Vytvoření textové vrstvy
+        // Vynutíme naprosto stejné rozměry neviditelné textové vrstvy
         textLayerDiv.innerHTML = "";
-        textLayerDiv.style.width = canvas.width + 'px';
-        textLayerDiv.style.height = canvas.height + 'px';
+        textLayerDiv.style.width = viewport.width + 'px';
+        textLayerDiv.style.height = viewport.height + 'px';
+        textLayerDiv.style.setProperty('--scale-factor', viewport.scale); // Důležité pro PDF.js
         
         const textContent = await page.getTextContent();
         pdfjsLib.renderTextLayer({
@@ -195,18 +288,17 @@
         });
 
         document.getElementById('page-info').innerText = `${num} / ${currentPdf.numPages}`;
-        localStorage.setItem('pdf_last_page', num);
+        updateBookProgress(num); 
     }
 
-    function nextPage() { if (pageNum < currentPdf.numPages) { pageNum++; renderPage(pageNum); } }
-    function prevPage() { if (pageNum > 1) { pageNum--; renderPage(pageNum); } }
+    function nextPage() { if (currentPdf && pageNum < currentPdf.numPages) { pageNum++; renderPage(pageNum); } }
+    function prevPage() { if (currentPdf && pageNum > 1) { pageNum--; renderPage(pageNum); } }
 
-    // Gesto označení - podpora pro věty
+    // --- OZNAČOVÁNÍ A PŘEKLAD ---
     document.addEventListener('touchend', handleSelection);
     document.addEventListener('mouseup', handleSelection);
 
     async function handleSelection() {
-        // Zpoždění, aby iOS stihl zaregistrovat konec výběru
         setTimeout(async () => {
             const sel = window.getSelection().toString().trim();
             if (sel && sel.length > 1 && document.getElementById('tab-reader').classList.contains('active')) {
@@ -230,15 +322,31 @@
         window.getSelection().removeAllRanges(); 
     }
 
+    // --- NAVIGACE TABS ---
     function showTab(id, el) {
         document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
         document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
         document.getElementById('tab-' + id).classList.add('active');
         el.classList.add('active');
-        if(id === 'words') renderWords();
-        if(id === 'cards') startCards();
+        
+        if(id === 'reader') {
+            if(!currentPdf) {
+                document.getElementById('pdf-view').style.display = 'none';
+                document.getElementById('pagination').style.display = 'none';
+                document.getElementById('no-book-msg').style.display = 'block';
+            } else {
+                renderLibrary(); // Aktualizace textu progresu v knihovně na pozadí
+            }
+        } else if (id === 'library') {
+            renderLibrary();
+        } else if (id === 'words') {
+            renderWords();
+        } else if (id === 'cards') {
+            startCards();
+        }
     }
 
+    // --- SLOVA & KARTY ---
     function renderWords() {
         const list = document.getElementById('word-list');
         list.innerHTML = words.map(w => `
@@ -255,7 +363,7 @@
         if (!words.length) { c.innerText = "Žádná slovíčka nebo věty"; return; }
         c.innerText = cardFlipped ? words[cardIdx].cs : words[cardIdx].en;
         c.style.color = cardFlipped ? "var(--p)" : "var(--text)";
-        c.style.fontSize = words[cardIdx].en.length > 30 ? "18px" : "24px"; // Zmenší písmo pro věty
+        c.style.fontSize = words[cardIdx].en.length > 30 ? "18px" : "24px";
     }
     
     function flipCard() {
