@@ -2,7 +2,7 @@
 <html lang="cs">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>LingoReader Pro</title>
@@ -11,23 +11,28 @@
         :root { --p: #007aff; --bg: #ffffff; --text: #000000; --card: #f2f2f7; }
         [data-theme="dark"] { --bg: #000000; --text: #ffffff; --card: #1c1c1e; --p: #0a84ff; }
 
-        body { font-family: -apple-system, system-ui, sans-serif; margin: 0; background: var(--bg); color: var(--text); transition: 0.3s; overflow-x: hidden; }
+        body { font-family: -apple-system, system-ui, sans-serif; margin: 0; background: var(--bg); color: var(--text); transition: 0.3s; }
         
         header { display: flex; justify-content: space-between; align-items: center; padding: 45px 20px 15px; background: rgba(var(--bg), 0.8); backdrop-filter: blur(15px); position: sticky; top: 0; z-index: 100; }
         .nav-icons { display: flex; gap: 20px; font-size: 20px; cursor: pointer; }
 
-        #pdf-view { position: relative; width: 100%; display: flex; justify-content: center; margin-bottom: 60px; }
-        /* OPRAVA: Odstraněno max-width a height: auto, aby se vrstvy nerozjely */
-        #pdf-render { z-index: 1; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        /* Kontejner pro scrollování PDF */
+        #pdf-view { position: relative; width: 100%; display: flex; flex-direction: column; align-items: center; padding-bottom: 100px; }
+        
+        /* Obal každé stránky zvlášť */
+        .pdf-page-wrapper { position: relative; width: 100%; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 15px; background: white; }
+        .pdf-page-wrapper canvas { display: block; z-index: 1; width: 100%; }
         
         .textLayer { position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: hidden; line-height: 1; text-size-adjust: none; z-index: 2; }
         .textLayer span { color: transparent; position: absolute; white-space: pre; cursor: text; transform-origin: 0% 0%; }
         .textLayer ::selection { background: rgba(0, 122, 255, 0.3); }
 
-        .pagination-bar { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); background: rgba(var(--bg), 0.9); backdrop-filter: blur(10px); padding: 10px 20px; border-radius: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); display: flex; align-items: center; gap: 20px; z-index: 50; }
-        .pagination-bar button { background: none; border: none; font-size: 20px; color: var(--p); font-weight: bold; }
+        /* Zmenšený indikátor stránky, tlačítka smazána */
+        .pagination-bar { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background: rgba(var(--bg), 0.9); backdrop-filter: blur(10px); padding: 8px 16px; border-radius: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); z-index: 50; display: none; }
+        #page-info { font-weight: bold; font-size: 14px; color: var(--text); }
 
-        .tab-bar { position: fixed; bottom: 0; width: 100%; display: flex; justify-content: space-around; padding: 15px 0 35px; background: var(--card); border-top: 1px solid #ccc; z-index: 101; }
+        /* OPRAVA MENU: safe-area-inset-bottom pro iPhone notch/home bar */
+        .tab-bar { position: fixed; bottom: 0; left: 0; width: 100%; display: flex; justify-content: space-around; padding: 10px 0 calc(10px + env(safe-area-inset-bottom)); background: var(--card); border-top: 1px solid #ccc; z-index: 101; }
         .tab-item { text-align: center; font-size: 10px; color: #8e8e93; text-decoration: none; flex: 1; }
         .tab-item.active { color: var(--p); }
 
@@ -36,7 +41,7 @@
 
         .card { background: var(--card); border-radius: 15px; padding: 40px 20px; text-align: center; margin-top: 30px; min-height: 200px; display: flex; flex-direction: column; justify-content: center; font-size: 24px; font-weight: 600; }
 
-        #popover { position: fixed; bottom: 110px; left: 15px; right: 15px; background: var(--card); border-radius: 20px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); display: none; z-index: 1000; max-height: 60vh; overflow-y: auto; }
+        #popover { position: fixed; bottom: 120px; left: 15px; right: 15px; background: var(--card); border-radius: 20px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); display: none; z-index: 1000; max-height: 60vh; overflow-y: auto; }
         #pop-en { font-weight: bold; font-size: 18px; line-height: 1.4; word-wrap: break-word; }
         #pop-cs { margin: 15px 0; font-size: 16px; opacity: 0.9; line-height: 1.4; word-wrap: break-word; }
         .btn-action { background: var(--p); color: white; border: none; padding: 14px; border-radius: 12px; width: 100%; font-weight: bold; margin-top: 10px; font-size: 16px; cursor: pointer; display: block; text-align: center; }
@@ -62,15 +67,10 @@
 </div>
 
 <div id="tab-reader" class="tab-content" style="padding: 0;">
-    <div id="pdf-view">
-        <canvas id="pdf-render"></canvas>
-        <div id="text-layer" class="textLayer"></div>
-    </div>
+    <div id="pdf-view"></div>
     
-    <div class="pagination-bar" id="pagination" style="display: none;">
-        <button onclick="prevPage()">⬅️</button>
-        <span id="page-info" style="font-weight: bold; font-size: 14px;">1 / 1</span>
-        <button onclick="nextPage()">➡️</button>
+    <div class="pagination-bar" id="pagination">
+        <span id="page-info">1 / 1</span>
     </div>
     
     <div id="no-book-msg" style="text-align:center; padding: 50px 20px; display:none;">
@@ -116,9 +116,9 @@
     let words = JSON.parse(localStorage.getItem('lingo_words') || '[]');
     let currentPdf = null;
     let currentBookId = null;
-    let pageNum = 1;
     let lastSelection = { en: '', cs: '' };
     let db;
+    let pageObserver; // Pro scrollování
 
     // --- INICIALIZACE DATABÁZE (IndexedDB pro PDF) ---
     function initDB() {
@@ -222,19 +222,18 @@
             if(!book) return;
             
             currentBookId = book.id;
-            pageNum = book.currentPage || 1;
             document.getElementById('book-title').innerText = book.name.substring(0, 15) + "...";
             
-            // Otevření PDF z uložených dat
             currentPdf = await pdfjsLib.getDocument({ data: new Uint8Array(book.data) }).promise;
             
             document.getElementById('pdf-view').style.display = 'flex';
-            document.getElementById('pagination').style.display = 'flex';
+            document.getElementById('pagination').style.display = 'block';
             document.getElementById('no-book-msg').style.display = 'none';
             
-            // Přepnutí do záložky "Čtení"
             document.getElementById('nav-read').click();
-            renderPage(pageNum);
+            
+            // Spuštění scrollovacího enginu na uložené stránce
+            initScrollReader(book.currentPage || 1);
         };
     }
 
@@ -252,32 +251,87 @@
         };
     }
 
-    // --- OPRAVA: VYLEPŠENÉ PDF VYKRESLOVÁNÍ PRO PŘESNÉ OZNAČOVÁNÍ ---
-    async function renderPage(num) {
-        if (!currentPdf) return;
-        const page = await currentPdf.getPage(num);
-        const canvas = document.getElementById('pdf-render');
-        const textLayerDiv = document.getElementById('text-layer');
-        const context = canvas.getContext('2d');
+    // --- NOVÝ SYSTÉM: SCROLLOVÁNÍ & RETINA BLUR FIX ---
+    function initScrollReader(startPage) {
+        const container = document.getElementById('pdf-view');
+        container.innerHTML = '';
         
-        // Přesný výpočet měřítka podle šířky displeje telefonu
-        const scale = window.innerWidth / page.getViewport({scale: 1}).width;
+        if (pageObserver) pageObserver.disconnect();
+        
+        // Sledujeme, která stránka je právě na obrazovce
+        pageObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const wrapper = entry.target;
+                    const num = parseInt(wrapper.dataset.page);
+                    
+                    // Pokud ještě nebyla vykreslena, vykreslíme ji (Lazy Load)
+                    if (wrapper.dataset.loaded === 'false') {
+                        wrapper.dataset.loaded = 'true';
+                        renderSinglePage(num, wrapper);
+                    }
+                    
+                    document.getElementById('page-info').innerText = `${num} / ${currentPdf.numPages}`;
+                    updateBookProgress(num);
+                }
+            });
+        }, { rootMargin: '300px 0px' }); // Přednačítáme trochu dopředu
+        
+        // Vytvoříme obaly pro všechny stránky (zatím prázdné kvůli paměti iPhonu)
+        for (let num = 1; num <= currentPdf.numPages; num++) {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'pdf-page-wrapper';
+            wrapper.id = 'page-wrapper-' + num;
+            wrapper.style.minHeight = window.innerHeight + 'px'; // Zástupná výška pro plynulý posuvník
+            wrapper.dataset.page = num;
+            wrapper.dataset.loaded = 'false';
+            
+            container.appendChild(wrapper);
+            pageObserver.observe(wrapper);
+        }
+
+        // Automatické odscrollování na rozečtenou stránku
+        setTimeout(() => {
+            const targetPage = document.getElementById('page-wrapper-' + startPage);
+            if (targetPage) targetPage.scrollIntoView();
+        }, 100);
+    }
+
+    async function renderSinglePage(num, wrapper) {
+        const page = await currentPdf.getPage(num);
+        
+        const canvas = document.createElement('canvas');
+        const textLayerDiv = document.createElement('div');
+        textLayerDiv.className = 'textLayer';
+        
+        wrapper.appendChild(canvas);
+        wrapper.appendChild(textLayerDiv);
+        
+        // Zjištění měřítka k šířce displeje telefonu
+        const unscaledViewport = page.getViewport({ scale: 1 });
+        const scale = window.innerWidth / unscaledViewport.width;
         const viewport = page.getViewport({ scale: scale });
 
-        // Vynutíme naprosto stejné rozměry obrázku
-        canvas.height = viewport.height;
-        canvas.width = viewport.width;
-        canvas.style.width = viewport.width + 'px';
-        canvas.style.height = viewport.height + 'px';
+        // OPRAVA BLURU: Využití DevicePixelRatio pro super-ostré fonty na iPhonu
+        const outputScale = window.devicePixelRatio || 1;
+        canvas.width = Math.floor(viewport.width * outputScale);
+        canvas.height = Math.floor(viewport.height * outputScale);
+        canvas.style.width = Math.floor(viewport.width) + "px";
+        canvas.style.height = Math.floor(viewport.height) + "px";
 
-        // Vykreslení PDF obrázku
-        await page.render({ canvasContext: context, viewport: viewport }).promise;
+        const transform = outputScale !== 1 ? [outputScale, 0, 0, outputScale, 0, 0] : null;
+        const context = canvas.getContext('2d');
+        
+        // Nastavení reálné výšky po zjištění parametrů stránky
+        wrapper.style.minHeight = 'auto';
+        wrapper.style.height = canvas.style.height;
 
-        // Vynutíme naprosto stejné rozměry neviditelné textové vrstvy
-        textLayerDiv.innerHTML = "";
+        await page.render({ canvasContext: context, transform: transform, viewport: viewport }).promise;
+
+        // Neviditelná vrstva pro přesný výběr textu
         textLayerDiv.style.width = viewport.width + 'px';
         textLayerDiv.style.height = viewport.height + 'px';
-        textLayerDiv.style.setProperty('--scale-factor', viewport.scale); // Důležité pro PDF.js
+        textLayerDiv.style.setProperty('--scale-factor', viewport.scale);
         
         const textContent = await page.getTextContent();
         pdfjsLib.renderTextLayer({
@@ -286,13 +340,7 @@
             viewport: viewport,
             textDivs: []
         });
-
-        document.getElementById('page-info').innerText = `${num} / ${currentPdf.numPages}`;
-        updateBookProgress(num); 
     }
-
-    function nextPage() { if (currentPdf && pageNum < currentPdf.numPages) { pageNum++; renderPage(pageNum); } }
-    function prevPage() { if (currentPdf && pageNum > 1) { pageNum--; renderPage(pageNum); } }
 
     // --- OZNAČOVÁNÍ A PŘEKLAD ---
     document.addEventListener('touchend', handleSelection);
@@ -335,7 +383,7 @@
                 document.getElementById('pagination').style.display = 'none';
                 document.getElementById('no-book-msg').style.display = 'block';
             } else {
-                renderLibrary(); // Aktualizace textu progresu v knihovně na pozadí
+                renderLibrary();
             }
         } else if (id === 'library') {
             renderLibrary();
