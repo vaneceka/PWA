@@ -5,25 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
-    
     <title>LingoReader Pro</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
     <style>
         :root { --p: #007aff; --bg: #ffffff; --text: #000000; --card: #f2f2f7; }
         [data-theme="dark"] { --bg: #000000; --text: #ffffff; --card: #1c1c1e; --p: #0a84ff; }
 
-        body { font-family: -apple-system, system-ui, sans-serif; margin: 0; background: var(--bg); color: var(--text); touch-action: pan-x pan-y; }
+        body { font-family: -apple-system, system-ui, sans-serif; margin: 0; background: var(--bg); color: var(--text); touch-action: pan-x pan-y; overflow-x: hidden; }
         
         .tab-content { display: none; padding: 20px 20px 120px 20px; }
         .tab-content.active { display: block; }
         #tab-reader { padding: 0 0 120px 0; overflow-x: auto; }
 
         #pdf-view { position: relative; display: flex; flex-direction: column; align-items: flex-start; min-width: 100%; width: max-content; }
-        
         .pdf-page-wrapper { position: relative; background: white; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         .pdf-page-wrapper canvas { display: block; z-index: 1; width: 100%; }
         
@@ -34,7 +28,6 @@
         .pagination-bar { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background: rgba(var(--bg), 0.9); backdrop-filter: blur(10px); padding: 8px 16px; border-radius: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); z-index: 50; display: none; }
         #page-info { font-weight: bold; font-size: 14px; color: var(--text); }
 
-        /* Návrat tlačítek pro Zoom */
         .zoom-controls { position: fixed; right: 15px; bottom: 140px; background: rgba(var(--bg), 0.9); backdrop-filter: blur(10px); border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); display: none; flex-direction: column; align-items: center; z-index: 55; }
         .zoom-controls button { background: none; border: none; color: var(--p); font-size: 22px; padding: 12px 15px; cursor: pointer; font-weight: bold; }
         .zoom-controls .zoom-val { font-size: 12px; font-weight: bold; color: var(--text); padding: 5px 0; border-top: 1px solid rgba(128,128,128,0.2); border-bottom: 1px solid rgba(128,128,128,0.2); width: 100%; text-align: center; }
@@ -43,18 +36,22 @@
         .tab-item { text-align: center; font-size: 10px; color: #8e8e93; text-decoration: none; flex: 1; }
         .tab-item.active { color: var(--p); }
 
-        .card { background: var(--card); border-radius: 15px; padding: 40px 20px; text-align: center; margin-top: 30px; min-height: 200px; display: flex; flex-direction: column; justify-content: center; font-size: 24px; font-weight: 600; }
+        .card { background: var(--card); border-radius: 15px; padding: 40px 20px; text-align: center; margin-top: 20px; min-height: 200px; display: flex; flex-direction: column; justify-content: center; font-size: 24px; font-weight: 600; user-select: none; }
 
         #popover { position: fixed; bottom: 120px; left: 15px; right: 15px; background: var(--card); border-radius: 20px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); display: none; z-index: 1000; max-height: 60vh; overflow-y: auto; }
         #pop-en { font-weight: bold; font-size: 18px; line-height: 1.4; word-wrap: break-word; }
         #pop-cs { margin: 15px 0; font-size: 16px; opacity: 0.9; line-height: 1.4; word-wrap: break-word; }
         .btn-action { background: var(--p); color: white; border: none; padding: 14px; border-radius: 12px; width: 100%; font-weight: bold; margin-top: 10px; font-size: 16px; cursor: pointer; display: block; text-align: center; }
         
-        .word-item { padding: 15px; border-bottom: 1px solid rgba(128,128,128,0.3); display: flex; flex-direction: column; }
+        .word-item { padding: 15px; border-bottom: 1px solid rgba(128,128,128,0.3); display: flex; justify-content: space-between; align-items: center; }
+        .word-item-text { display: flex; flex-direction: column; flex: 1; }
         .book-item { padding: 15px; background: var(--card); border-radius: 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
 
-        /* Plovoucí tlačítko na překlad */
         #translate-tooltip { display: none; position: fixed; background: var(--p); color: white; border: none; padding: 10px 16px; border-radius: 12px; font-weight: bold; font-size: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); z-index: 2000; transform: translateX(-50%); cursor: pointer; }
+
+        .card-controls { display: flex; justify-content: space-between; align-items: center; margin-top: 15px; }
+        .card-btn { background: var(--card); color: var(--text); border: none; padding: 15px 25px; border-radius: 12px; font-size: 20px; cursor: pointer; font-weight: bold; }
+        .card-counter { font-size: 14px; color: gray; }
     </style>
 </head>
 <body>
@@ -62,10 +59,11 @@
 <div id="tab-library" class="tab-content active">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; margin-top: 20px;">
         <h2 style="margin: 0;">Moje Knihy</h2>
-        <span onclick="toggleTheme()" style="font-size: 24px; cursor: pointer;">🌓</span>
+        <div>
+            <span onclick="forceUpdate()" style="font-size: 24px; cursor: pointer; margin-right: 15px;" title="Aktualizovat aplikaci z GitHubu">🔄</span>
+            <span onclick="toggleTheme()" style="font-size: 24px; cursor: pointer;" title="Přepnout motiv">🌓</span>
+        </div>
     </div>
-    
-    <button class="btn-action" style="background: #ff9500; margin-bottom: 15px;" onclick="forceUpdate()">🔄 Aktualizovat aplikaci</button>
     
     <label for="file-upload" class="btn-action" style="margin-bottom: 20px; background: #34c759;">+ Přidat knihu (PDF)</label>
     <input type="file" id="file-upload" accept="application/pdf" style="display:none">
@@ -80,9 +78,9 @@
     </div>
 
     <div class="zoom-controls" id="zoom-controls">
-        <button onclick="changeZoom(0.25)">➕</button>
+        <button onclick="changeZoom(0.10)">➕</button>
         <div class="zoom-val" id="zoom-val">100%</div>
-        <button onclick="changeZoom(-0.25)">➖</button>
+        <button onclick="changeZoom(-0.10)">➖</button>
     </div>
     
     <div id="no-book-msg" style="text-align:center; padding: 50px 20px; display:none;">
@@ -92,7 +90,14 @@
 </div>
 
 <div id="tab-words" class="tab-content">
-    <h2 style="margin-top: 20px;">Slovníček</h2>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px; margin-bottom: 15px;">
+        <h2 style="margin: 0;">Slovníček</h2>
+        <div>
+            <button onclick="exportBackup()" style="background: #34c759; color: white; border: none; padding: 8px 12px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px;">💾 Záloha</button>
+            <label for="import-words" style="background: #ff9500; color: white; border: none; padding: 8px 12px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px; margin-left: 5px;">📂 Obnovit</label>
+            <input type="file" id="import-words" accept=".json" style="display:none" onchange="importBackup(event)">
+        </div>
+    </div>
     <div id="word-list"></div>
 </div>
 
@@ -106,6 +111,12 @@
 <div id="tab-cards" class="tab-content">
     <h2 style="margin-top: 20px;">Trénink</h2>
     <div id="flashcard" class="card" onclick="flipCard()">Nahrajte slova</div>
+    <div class="card-controls">
+        <button class="card-btn" onclick="prevCard()">⬅️</button>
+        <span class="card-counter" id="card-counter">0 / 0</span>
+        <button class="card-btn" onclick="nextCard()">➡️</button>
+    </div>
+    <p style="text-align:center; color:gray; font-size:12px; margin-top:15px;">Můžeš také přejet prstem doleva/doprava</p>
 </div>
 
 <button id="translate-tooltip" onclick="executeTranslation()">🌐 Přeložit</button>
@@ -133,11 +144,7 @@
     let db;
     let pageObserver; 
     let globalZoom = 1.0; 
-    let pendingTranslationText = ""; // Ukládá text, který si uživatel vybral
-
-    function forceUpdate() {
-        window.location.href = window.location.pathname + '?v=' + new Date().getTime();
-    }
+    let pendingTranslationText = ""; 
 
     function initDB() {
         return new Promise((resolve, reject) => {
@@ -158,6 +165,13 @@
     function toggleTheme() {
         const doc = document.documentElement;
         doc.setAttribute('data-theme', doc.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+    }
+
+    // Funkce pro vynucenou aktualizaci aplikace na ploše
+    function forceUpdate() {
+        if(confirm("Chcete stáhnout nejnovější verzi aplikace z GitHubu? (Tvoje knihy a slovíčka zůstanou v bezpečí)")) {
+            window.location.href = window.location.pathname + '?v=' + new Date().getTime();
+        }
     }
 
     async function translate(text) {
@@ -204,7 +218,7 @@
                 <div class="book-item">
                     <div onclick="openBook('${b.id}')" style="flex:1; cursor:pointer;">
                         <b>${b.name.substring(0,25)}...</b><br>
-                        <small style="color:gray;">Rozečteno: Strana ${b.currentPage}</small>
+                        <small style="color:gray;">Rozečteno: Strana ${b.currentPage || 1}</small>
                     </div>
                     <button onclick="deleteBook('${b.id}')" style="background:none; border:none; font-size:22px; color:#ff3b30; padding:10px;">🗑️</button>
                 </div>
@@ -270,6 +284,9 @@
         let newZoom = globalZoom + delta;
         if (newZoom < 0.5) newZoom = 0.5;
         if (newZoom > 3.0) newZoom = 3.0;
+        
+        newZoom = Math.round(newZoom * 10) / 10;
+        
         if (newZoom === globalZoom) return;
         
         globalZoom = newZoom;
@@ -322,7 +339,6 @@
 
     async function renderSinglePage(num, wrapper) {
         const page = await currentPdf.getPage(num);
-        
         const canvas = document.createElement('canvas');
         const textLayerDiv = document.createElement('div');
         textLayerDiv.className = 'textLayer';
@@ -354,15 +370,9 @@
         textLayerDiv.style.setProperty('--scale-factor', viewport.scale);
         
         const textContent = await page.getTextContent();
-        pdfjsLib.renderTextLayer({
-            textContent: textContent,
-            container: textLayerDiv,
-            viewport: viewport,
-            textDivs: []
-        });
+        pdfjsLib.renderTextLayer({ textContent: textContent, container: textLayerDiv, viewport: viewport, textDivs: [] });
     }
 
-    // Nová logika pro výběr textu a plovoucí tlačítko
     document.addEventListener('selectionchange', () => {
         const sel = window.getSelection();
         const tooltip = document.getElementById('translate-tooltip');
@@ -375,7 +385,6 @@
             tooltip.style.display = 'block';
             tooltip.style.left = (rect.left + rect.width / 2) + 'px';
             
-            // Umístění tlačítka nad text (nebo pod něj, pokud by bylo moc nahoře)
             let topPos = rect.top - 50;
             if (topPos < 50) topPos = rect.bottom + 10;
             tooltip.style.top = topPos + 'px';
@@ -386,16 +395,14 @@
         }
     });
 
-    // Skrytí tooltipu při scrollování, ať to nepřekáží
     window.addEventListener('scroll', () => {
         document.getElementById('translate-tooltip').style.display = 'none';
     }, true);
 
-    // Samotné spuštění překladu po kliknutí na plovoucí tlačítko
     async function executeTranslation() {
         if (!pendingTranslationText) return;
         
-        document.getElementById('translate-tooltip').style.display = 'none'; // Schováme tlačítko
+        document.getElementById('translate-tooltip').style.display = 'none';
         
         const selText = pendingTranslationText;
         document.getElementById('pop-en').innerText = selText;
@@ -419,6 +426,77 @@
         window.getSelection().removeAllRanges(); 
     }
 
+    function exportBackup() {
+        const tx = db.transaction('books', 'readonly');
+        const req = tx.objectStore('books').getAll();
+        
+        req.onsuccess = () => {
+            const books = req.result;
+            const bookProgress = books.map(b => ({ id: b.id, name: b.name, currentPage: b.currentPage }));
+            
+            const backupData = {
+                words: words,
+                bookProgress: bookProgress
+            };
+
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData));
+            const downloadNode = document.createElement('a');
+            downloadNode.setAttribute("href", dataStr);
+            downloadNode.setAttribute("download", "lingo_kompletni_zaloha.json");
+            document.body.appendChild(downloadNode);
+            downloadNode.click();
+            downloadNode.remove();
+        };
+    }
+
+    function importBackup(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const importedData = JSON.parse(e.target.result);
+                if (importedData.words) {
+                    words = importedData.words;
+                    localStorage.setItem('lingo_words', JSON.stringify(words));
+                    renderWords();
+                } else if (Array.isArray(importedData)) { 
+                    words = importedData;
+                    localStorage.setItem('lingo_words', JSON.stringify(words));
+                    renderWords();
+                }
+                
+                if (importedData.bookProgress && db) {
+                    const tx = db.transaction('books', 'readwrite');
+                    const store = tx.objectStore('books');
+                    importedData.bookProgress.forEach(backupBook => {
+                        const getReq = store.get(backupBook.id);
+                        getReq.onsuccess = () => {
+                            if(getReq.result) {
+                                let b = getReq.result;
+                                b.currentPage = backupBook.currentPage;
+                                store.put(b);
+                            }
+                        };
+                    });
+                }
+                alert("Záloha byla úspěšně obnovena!");
+            } catch (err) {
+                alert("Chyba při čtení souboru. Zkontroluj, že jde o správnou zálohu.");
+            }
+        };
+        reader.readAsText(file);
+        event.target.value = ''; 
+    }
+
+    function deleteWord(id) {
+        if(confirm("Opravdu smazat toto slovíčko?")) {
+            words = words.filter(w => w.id !== id);
+            localStorage.setItem('lingo_words', JSON.stringify(words));
+            renderWords();
+        }
+    }
+
     function showTab(id, el) {
         document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
         document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
@@ -437,7 +515,7 @@
             }
         } else {
             document.getElementById('zoom-controls').style.display = 'none';
-            document.getElementById('translate-tooltip').style.display = 'none'; // Schováme tooltip jinde
+            document.getElementById('translate-tooltip').style.display = 'none';
             if (id === 'library') renderLibrary();
             else if (id === 'words') renderWords();
             else if (id === 'cards') startCards();
@@ -446,28 +524,79 @@
 
     function renderWords() {
         const list = document.getElementById('word-list');
+        if(words.length === 0) {
+            list.innerHTML = "<p style='color:gray; text-align:center;'>Slovníček je zatím prázdný.</p>";
+            return;
+        }
         list.innerHTML = words.map(w => `
             <div class="word-item">
-                <b>${w.en}</b><span style="opacity:0.8; margin-top:5px;">${w.cs}</span>
+                <div class="word-item-text">
+                    <b>${w.en}</b><span style="opacity:0.8; margin-top:5px;">${w.cs}</span>
+                </div>
+                <button onclick="deleteWord(${w.id})" style="background:none; border:none; font-size:20px; color:#ff3b30; padding:10px; cursor:pointer;">🗑️</button>
             </div>`).reverse().join('');
     }
 
     let cardIdx = 0, cardFlipped = false;
-    function startCards() { cardIdx = 0; cardFlipped = false; updateCard(); }
+    
+    function startCards() { 
+        cardIdx = 0; 
+        cardFlipped = false; 
+        updateCard(); 
+    }
     
     function updateCard() {
         const c = document.getElementById('flashcard');
-        if (!words.length) { c.innerText = "Žádná slovíčka nebo věty"; return; }
+        const counter = document.getElementById('card-counter');
+        
+        if (!words.length) { 
+            c.innerText = "Žádná slovíčka"; 
+            counter.innerText = "0 / 0";
+            return; 
+        }
+        
         c.innerText = cardFlipped ? words[cardIdx].cs : words[cardIdx].en;
         c.style.color = cardFlipped ? "var(--p)" : "var(--text)";
         c.style.fontSize = words[cardIdx].en.length > 30 ? "18px" : "24px";
+        counter.innerText = `${cardIdx + 1} / ${words.length}`;
     }
     
     function flipCard() {
         if (!words.length) return;
-        if (!cardFlipped) { cardFlipped = true; } 
-        else { cardFlipped = false; cardIdx = (cardIdx + 1) % words.length; }
+        cardFlipped = !cardFlipped;
         updateCard();
+    }
+
+    function nextCard() {
+        if (!words.length) return;
+        cardIdx = (cardIdx + 1) % words.length;
+        cardFlipped = false;
+        updateCard();
+    }
+
+    function prevCard() {
+        if (!words.length) return;
+        cardIdx = (cardIdx - 1 + words.length) % words.length;
+        cardFlipped = false;
+        updateCard();
+    }
+
+    let touchstartX = 0;
+    let touchendX = 0;
+    const flashcardElement = document.getElementById('flashcard');
+
+    flashcardElement.addEventListener('touchstart', e => {
+        touchstartX = e.changedTouches[0].screenX;
+    }, {passive: true});
+
+    flashcardElement.addEventListener('touchend', e => {
+        touchendX = e.changedTouches[0].screenX;
+        handleSwipe();
+    }, {passive: true});
+
+    function handleSwipe() {
+        if (touchendX < touchstartX - 40) nextCard(); 
+        if (touchendX > touchstartX + 40) prevCard(); 
     }
 
     async function manualTranslate() {
