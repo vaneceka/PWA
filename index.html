@@ -11,6 +11,8 @@
         :root { --p: #007aff; --bg: #ffffff; --text: #000000; --card: #f2f2f7; }
         [data-theme="dark"] { --bg: #000000; --text: #ffffff; --card: #1c1c1e; --p: #0a84ff; }
 
+        *, *::before, *::after { box-sizing: border-box; }
+
         body { font-family: -apple-system, system-ui, sans-serif; margin: 0; background: var(--bg); color: var(--text); touch-action: pan-x pan-y; overflow-x: hidden; }
         
         .tab-content { display: none; padding: 20px 20px 120px 20px; }
@@ -32,7 +34,7 @@
         .zoom-controls button { background: none; border: none; color: var(--p); font-size: 22px; padding: 12px 15px; cursor: pointer; font-weight: bold; }
         .zoom-controls .zoom-val { font-size: 12px; font-weight: bold; color: var(--text); padding: 5px 0; border-top: 1px solid rgba(128,128,128,0.2); border-bottom: 1px solid rgba(128,128,128,0.2); width: 100%; text-align: center; }
 
-        .tab-bar { position: fixed; bottom: 0; left: 0; width: 100%; display: flex; justify-content: space-around; padding: 10px 0 calc(10px + env(safe-area-inset-bottom)); background: var(--card); border-top: 1px solid #ccc; z-index: 101; }
+        .tab-bar { position: fixed; bottom: 0; left: 0; right: 0; display: flex; justify-content: space-around; padding: 10px 0 calc(10px + env(safe-area-inset-bottom)); background: var(--card); border-top: 1px solid #ccc; z-index: 101; }
         .tab-item { text-align: center; font-size: 10px; color: #8e8e93; text-decoration: none; flex: 1; }
         .tab-item.active { color: var(--p); }
 
@@ -41,7 +43,8 @@
         #popover { position: fixed; bottom: 120px; left: 15px; right: 15px; background: var(--card); border-radius: 20px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); display: none; z-index: 1000; max-height: 60vh; overflow-y: auto; }
         #pop-en { font-weight: bold; font-size: 18px; line-height: 1.4; word-wrap: break-word; }
         #pop-cs { margin: 15px 0; font-size: 16px; opacity: 0.9; line-height: 1.4; word-wrap: break-word; }
-        .btn-action { background: var(--p); color: white; border: none; padding: 14px; border-radius: 12px; width: 100%; font-weight: bold; margin-top: 10px; font-size: 16px; cursor: pointer; display: block; text-align: center; }
+        
+        .btn-action { background: var(--p); color: white; border: none; padding: 14px; border-radius: 12px; width: 100%; max-width: 500px; margin: 10px auto 0 auto; font-weight: bold; font-size: 16px; cursor: pointer; display: block; text-align: center; }
         
         .word-item { padding: 15px; border-bottom: 1px solid rgba(128,128,128,0.3); display: flex; justify-content: space-between; align-items: center; }
         .word-item-text { display: flex; flex-direction: column; flex: 1; }
@@ -49,9 +52,11 @@
 
         #translate-tooltip { display: none; position: fixed; background: var(--p); color: white; border: none; padding: 10px 16px; border-radius: 12px; font-weight: bold; font-size: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); z-index: 2000; transform: translateX(-50%); cursor: pointer; }
 
-        .card-controls { display: flex; justify-content: space-between; align-items: center; margin-top: 15px; }
-        .card-btn { background: var(--card); color: var(--text); border: none; padding: 15px 25px; border-radius: 12px; font-size: 20px; cursor: pointer; font-weight: bold; }
-        .card-counter { font-size: 14px; color: gray; }
+        /* Kontejner pro šipky ukotvený pevně dole nad menu */
+        .card-controls-container { position: fixed; bottom: calc(85px + env(safe-area-inset-bottom)); left: 0; right: 0; max-width: 500px; margin: 0 auto; padding: 0 20px; z-index: 90; }
+        .card-controls { display: flex; justify-content: space-between; align-items: center; }
+        .card-btn { background: var(--card); color: var(--text); border: none; padding: 15px 25px; border-radius: 12px; font-size: 20px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .card-counter { font-size: 14px; color: gray; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -103,20 +108,23 @@
 
 <div id="tab-translate" class="tab-content">
     <h2 style="margin-top: 20px;">Překladač</h2>
-    <textarea id="manual-input" style="width:100%; height:120px; border-radius:15px; padding:15px; background:var(--card); color:var(--text); border:none; font-size:16px; box-sizing: border-box;" placeholder="Vlož slovo nebo větu..."></textarea>
+    <textarea id="manual-input" style="width:100%; max-width: 500px; display: block; margin: 0 auto; height:120px; border-radius:15px; padding:15px; background:var(--card); color:var(--text); border:none; font-size:16px;" placeholder="Vlož slovo nebo větu..."></textarea>
     <button class="btn-action" onclick="manualTranslate()">Přeložit</button>
-    <div id="manual-result" style="margin-top:20px"></div>
+    <div id="manual-result" style="margin-top:20px; max-width: 500px; margin-left: auto; margin-right: auto;"></div>
 </div>
 
 <div id="tab-cards" class="tab-content">
-    <h2 style="margin-top: 20px;">Trénink</h2>
-    <div id="flashcard" class="card" onclick="flipCard()">Nahrajte slova</div>
-    <div class="card-controls">
-        <button class="card-btn" onclick="prevCard()">⬅️</button>
-        <span class="card-counter" id="card-counter">0 / 0</span>
-        <button class="card-btn" onclick="nextCard()">➡️</button>
+    <h2 style="margin-top: 20px; max-width: 500px; margin-left: auto; margin-right: auto;">Trénink</h2>
+    <div id="flashcard" class="card" style="max-width: 500px; margin-left: auto; margin-right: auto;" onclick="flipCard()">Nahrajte slova</div>
+    
+    <div class="card-controls-container">
+        <div class="card-controls">
+            <button class="card-btn" onclick="prevCard()">⬅️</button>
+            <span class="card-counter" id="card-counter">0 / 0</span>
+            <button class="card-btn" onclick="nextCard()">➡️</button>
+        </div>
+        <p style="text-align:center; color:gray; font-size:12px; margin-top:15px; margin-bottom: 0;">Můžeš také přejet prstem doleva/doprava</p>
     </div>
-    <p style="text-align:center; color:gray; font-size:12px; margin-top:15px;">Můžeš také přejet prstem doleva/doprava</p>
 </div>
 
 <button id="translate-tooltip" onclick="executeTranslation()">🌐 Přeložit</button>
@@ -167,7 +175,6 @@
         doc.setAttribute('data-theme', doc.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
     }
 
-    // Funkce pro vynucenou aktualizaci aplikace na ploše
     function forceUpdate() {
         if(confirm("Chcete stáhnout nejnovější verzi aplikace z GitHubu? (Tvoje knihy a slovíčka zůstanou v bezpečí)")) {
             window.location.href = window.location.pathname + '?v=' + new Date().getTime();
@@ -215,7 +222,7 @@
                 return;
             }
             list.innerHTML = books.map(b => `
-                <div class="book-item">
+                <div class="book-item" style="max-width: 500px; margin-left: auto; margin-right: auto;">
                     <div onclick="openBook('${b.id}')" style="flex:1; cursor:pointer;">
                         <b>${b.name.substring(0,25)}...</b><br>
                         <small style="color:gray;">Rozečteno: Strana ${b.currentPage || 1}</small>
@@ -529,7 +536,7 @@
             return;
         }
         list.innerHTML = words.map(w => `
-            <div class="word-item">
+            <div class="word-item" style="max-width: 500px; margin-left: auto; margin-right: auto;">
                 <div class="word-item-text">
                     <b>${w.en}</b><span style="opacity:0.8; margin-top:5px;">${w.cs}</span>
                 </div>
