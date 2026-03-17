@@ -118,9 +118,13 @@
     <div id="flashcard" class="card" style="max-width: 500px; margin-left: auto; margin-right: auto;" onclick="flipCard()">Nahrajte slova</div>
     
     <div class="card-controls-container">
+        <div style="text-align: center; margin-bottom: 12px;">
+            <span class="card-counter" id="card-counter">0 / 0</span>
+        </div>
+        
         <div class="card-controls">
             <button class="card-btn" onclick="prevCard()">⬅️</button>
-            <span class="card-counter" id="card-counter">0 / 0</span>
+            <button class="card-btn" onclick="flipCard()" style="flex-grow: 1; margin: 0 15px; font-size: 18px; color: var(--p);">🔄 Otočit</button>
             <button class="card-btn" onclick="nextCard()">➡️</button>
         </div>
         <p style="text-align:center; color:gray; font-size:12px; margin-top:15px; margin-bottom: 0;">Můžeš také přejet prstem doleva/doprava</p>
