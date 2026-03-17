@@ -52,7 +52,6 @@
 
         #translate-tooltip { display: none; position: fixed; background: var(--p); color: white; border: none; padding: 10px 16px; border-radius: 12px; font-weight: bold; font-size: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); z-index: 2000; transform: translateX(-50%); cursor: pointer; }
 
-        /* Kontejner pro šipky ukotvený pevně dole nad menu */
         .card-controls-container { position: fixed; bottom: calc(85px + env(safe-area-inset-bottom)); left: 0; right: 0; max-width: 500px; margin: 0 auto; padding: 0 20px; z-index: 90; }
         .card-controls { display: flex; justify-content: space-between; align-items: center; }
         .card-btn { background: var(--card); color: var(--text); border: none; padding: 15px 25px; border-radius: 12px; font-size: 20px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
@@ -202,11 +201,19 @@
         document.getElementById('book-list').innerHTML = "Ukládám knihu do iPhonu...";
         
         const arrayBuffer = await file.arrayBuffer();
+        const bookName = file.name.replace('.pdf', '');
+        
+        // Zkusíme najít uložený progres (pokud jsme předtím obnovovali zálohu)
+        let startPage = 1;
+        const savedProgress = JSON.parse(localStorage.getItem('lingo_book_progress') || '[]');
+        const match = savedProgress.find(p => p.name === bookName);
+        if (match) startPage = match.currentPage;
+
         const book = {
-            id: Date.now().toString(),
-            name: file.name.replace('.pdf', ''),
+            id: file.name, // Použijeme jméno jako ID pro lepší párování při obnově
+            name: bookName,
             data: arrayBuffer,
-            currentPage: 1
+            currentPage: startPage
         };
 
         const tx = db.transaction('books', 'readwrite');
@@ -477,19 +484,25 @@
                     renderWords();
                 }
                 
-                if (importedData.bookProgress && db) {
-                    const tx = db.transaction('books', 'readwrite');
-                    const store = tx.objectStore('books');
-                    importedData.bookProgress.forEach(backupBook => {
-                        const getReq = store.get(backupBook.id);
-                        getReq.onsuccess = () => {
-                            if(getReq.result) {
-                                let b = getReq.result;
-                                b.currentPage = backupBook.currentPage;
-                                store.put(b);
-                            }
-                        };
-                    });
+                if (importedData.bookProgress) {
+                    // Uložíme si progres pro budoucí nahrání PDF souborů
+                    localStorage.setItem('lingo_book_progress', JSON.stringify(importedData.bookProgress));
+                    
+                    if (db) {
+                        const tx = db.transaction('books', 'readwrite');
+                        const store = tx.objectStore('books');
+                        importedData.bookProgress.forEach(backupBook => {
+                            const getReq = store.get(backupBook.id);
+                            getReq.onsuccess = () => {
+                                if(getReq.result) {
+                                    let b = getReq.result;
+                                    b.currentPage = backupBook.currentPage;
+                                    store.put(b);
+                                }
+                            };
+                        });
+                        tx.oncomplete = () => renderLibrary();
+                    }
                 }
                 alert("Záloha byla úspěšně obnovena!");
             } catch (err) {
