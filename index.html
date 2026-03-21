@@ -106,7 +106,14 @@
 </div>
 
 <div id="tab-translate" class="tab-content">
-    <h2 style="margin-top: 20px;">Překladač</h2>
+    <h2 style="margin-top: 20px; text-align:center;">Překladač</h2>
+    
+    <div style="display: flex; justify-content: center; align-items: center; margin-bottom: 15px;">
+        <span id="lang-from" style="font-weight:bold; font-size:16px;">Angličtina</span>
+        <button onclick="swapLanguages()" style="background:var(--card); border:none; border-radius:50%; font-size:20px; cursor:pointer; margin: 0 20px; width:40px; height:40px; box-shadow:0 2px 5px rgba(0,0,0,0.1);">🔄</button>
+        <span id="lang-to" style="font-weight:bold; font-size:16px;">Čeština</span>
+    </div>
+
     <textarea id="manual-input" style="width:100%; max-width: 500px; display: block; margin: 0 auto; height:120px; border-radius:15px; padding:15px; background:var(--card); color:var(--text); border:none; font-size:16px;" placeholder="Vlož slovo nebo větu..."></textarea>
     <button class="btn-action" onclick="manualTranslate()">Přeložit</button>
     <div id="manual-result" style="margin-top:20px; max-width: 500px; margin-left: auto; margin-right: auto;"></div>
@@ -156,6 +163,8 @@
     let pageObserver; 
     let globalZoom = 1.0; 
     let pendingTranslationText = ""; 
+    let langFrom = 'en';
+    let langTo = 'cs';
 
     function initDB() {
         return new Promise((resolve, reject) => {
@@ -184,13 +193,36 @@
         }
     }
 
-    async function translate(text) {
+    function swapLanguages() {
+        if (langFrom === 'en') {
+            langFrom = 'cs';
+            langTo = 'en';
+            document.getElementById('lang-from').innerText = 'Čeština';
+            document.getElementById('lang-to').innerText = 'Angličtina';
+        } else {
+            langFrom = 'en';
+            langTo = 'cs';
+            document.getElementById('lang-from').innerText = 'Angličtina';
+            document.getElementById('lang-to').innerText = 'Čeština';
+        }
+    }
+
+    async function translate(text, sl = 'auto', tl = 'cs') {
         if (!text) return "";
         try {
-            const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|cs`);
+            const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sl}&tl=${tl}&dt=t&q=${encodeURIComponent(text)}`;
+            const res = await fetch(url);
             const data = await res.json();
-            return data.responseData.translatedText;
-        } catch (e) { return "Chyba překladu"; }
+            
+            let translatedText = "";
+            data[0].forEach(item => {
+                translatedText += item[0];
+            });
+            return translatedText;
+        } catch (e) { 
+            console.error("Chyba překladu:", e);
+            return "Chyba překladu. Zkontrolujte připojení."; 
+        }
     }
 
     const fileInput = document.getElementById('file-upload');
@@ -427,7 +459,8 @@
         document.getElementById('pop-cs').innerText = "Překládám...";
         document.getElementById('popover').style.display = 'block';
         
-        const trans = await translate(selText);
+        // V PDF použijeme auto detekci
+        const trans = await translate(selText, 'auto', 'cs');
         lastSelection = { en: selText, cs: trans };
         document.getElementById('pop-cs').innerText = trans;
     }
@@ -485,7 +518,6 @@
                 }
                 
                 if (importedData.bookProgress) {
-                    // Uložíme si progres pro budoucí nahrání PDF souborů
                     localStorage.setItem('lingo_book_progress', JSON.stringify(importedData.bookProgress));
                     
                     if (db) {
@@ -626,9 +658,19 @@
     async function manualTranslate() {
         const input = document.getElementById('manual-input');
         if(!input.value.trim()) return;
-        const res = await translate(input.value);
-        lastSelection = { en: input.value, cs: res };
-        document.getElementById('manual-result').innerHTML = `<div class="card" style="margin-top:10px; min-height:100px; font-size:16px; text-align:left;"><b>${input.value}</b><br><br>${res}<br><button class="btn-action" onclick="saveWord()">Uložit</button></div>`;
+        
+        const res = await translate(input.value, langFrom, langTo);
+        
+        const enText = langFrom === 'en' ? input.value : res;
+        const csText = langFrom === 'en' ? res : input.value;
+        
+        lastSelection = { en: enText, cs: csText };
+        
+        document.getElementById('manual-result').innerHTML = `
+            <div class="card" style="margin-top:10px; min-height:100px; font-size:16px; text-align:left;">
+                <b>${input.value}</b><br><br>${res}<br>
+                <button class="btn-action" style="margin-top: 15px;" onclick="saveWord()">Uložit do slovníčku</button>
+            </div>`;
     }
 </script>
 </body>
